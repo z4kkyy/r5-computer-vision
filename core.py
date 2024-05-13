@@ -18,7 +18,7 @@ from ultralytics import YOLO
 
 
 class r5CVCore:
-    def __init__(self, args, config, camera):
+    def __init__(self, args, config, camera) -> None:
         self.args = args
         self.config = config
         self.camera = camera
@@ -63,15 +63,15 @@ class r5CVCore:
         self.backforce = 0
         self.aim_fov = 4 / 3
 
-    def load_model(self):
+    def load_model(self) -> None:
         model_path = os.path.join(self.args.model_dir, self.args.model_name)
         self.model = YOLO(model_path)
 
-    def load_TRT_model(self):
+    def load_TRT_model(self) -> None:
         engine_path = os.path.join(self.args.model_dir, self.args.model_name)
         self.trt_model = TensorRTEngine(engine_path)
 
-    def predict(self, image):
+    def predict(self, image) -> np.ndarray:
         results = self.model(
             image,
             verbose=self.args.verbose,
@@ -81,7 +81,7 @@ class r5CVCore:
         )
         return results[0]
 
-    def predict_TRT(self, image):
+    def predict_TRT(self, image) -> tuple:
         boxes, scores, cls_indices = self.trt_model.inference(
             image,
             iou=self.config["iou_threshold"],
@@ -91,37 +91,35 @@ class r5CVCore:
         return boxes, scores, cls_indices
 
     def calc_mouse_redirection(self, boxes) -> None:
-        if boxes.shape[0] == 0:
+        num_boxes = boxes.shape[0]
+        if num_boxes == 0:  # no target detected
             self.width = -1
             self.last_destination = self.destination  # save the last destination
             self.destination = np.array([-1, -1])
-            return
+        else:
+            self.mouse_position = np.array(mouse.Controller().position)
 
-        self.mouse_position = np.array(mouse.Controller().position)
+            boxes_center = ((boxes[:, :2] + boxes[:, 2:]) / 2)
+            boxes_center[:, 1] = (
+                # boxes[:, 1] * 0.6 + boxes[:, 3] * 0.4  # torso
+                boxes[:, 1] * 0.7 + boxes[:, 3] * 0.3  # chest
+            )
 
-        boxes_center = ((boxes[:, :2] + boxes[:, 2:]) / 2)
-        boxes_center[:, 1] = (
-            # boxes[:, 1] * 0.6 + boxes[:, 3] * 0.4  # torso
-            boxes[:, 1] * 0.7 + boxes[:, 3] * 0.3  # chest
-        )
+            crop_size = 540 / win32api.GetSystemMetrics(1)
+            # map the box from the image coordinate to the screen coordinate
+            start_point = self.screen_center - self.screen_size[1] * crop_size / 2
+            start_point = list(map(int, start_point))
+            boxes_center[:, 0] = boxes_center[:, 0] + start_point[0]
+            boxes_center[:, 1] = boxes_center[:, 1] + start_point[1]
 
-        crop_size = 540 / win32api.GetSystemMetrics(1)
-        # map the box from the image coordinate to the screen coordinate
-        start_point = self.screen_center - self.screen_size[1] * crop_size / 2
-        start_point = list(map(int, start_point))
-        boxes_center[:, 0] = boxes_center[:, 0] + start_point[0]
-        boxes_center[:, 1] = boxes_center[:, 1] + start_point[1]
+            # find the nearest box center
+            distance = np.linalg.norm(boxes_center - self.mouse_position, axis=-1)
+            min_index = np.argmin(distance)
+            self.width = boxes[min_index, 2] - boxes[min_index, 0]
+            self.last_destination = self.destination
+            self.destination = boxes_center[np.argmin(distance)].astype(int)
 
-        # find the nearest box center
-        distance = np.linalg.norm(boxes_center - self.mouse_position, axis=-1)
-        min_index = np.argmin(distance)
-        self.width = boxes[min_index, 2] - boxes[min_index, 0]
-        self.last_destination = self.destination
-        self.destination = boxes_center[np.argmin(distance)].astype(int)
-
-        print(self.destination)
-
-    def pid_control(self, error):
+    def pid_control(self, error) -> np.ndarray:
         self.integral += error
         derivative = error - self.pre_error
         self.pre_error = error
@@ -130,7 +128,7 @@ class r5CVCore:
         output[1] += self.backforce
         return output.astype(int)
 
-    def move_mouse(self, key_state, mouse_state):
+    def move_mouse(self, key_state, mouse_state) -> None:
         hold_active, toggle_active, _ = key_state
         mouse_left_active, mouse_right_active = mouse_state
         detecting = hold_active or toggle_active
@@ -194,7 +192,7 @@ class r5CVCore:
             )
             return
 
-    def execute(self, key_state, mouse_state):
+    def execute(self, key_state, mouse_state) -> None:
         captured_image = self.camera.capture()
 
         if self.args.model_name.endswith(".engine"):
@@ -215,8 +213,7 @@ class r5CVCore:
 
 
 class TensorRTEngine(object):
-    def __init__(self, engine_path):
-
+    def __init__(self, engine_path) -> None:
         with open(f"{os.path.realpath(os.path.dirname(__file__))}/class_names.json", "r") as file:
             self.cls_names = json.load(file)
 
@@ -249,7 +246,7 @@ class TensorRTEngine(object):
             else:
                 self.outputs.append({'host': host_mem, 'device': device_mem})
 
-    def inference(self, img, iou=0.45, conf=0.25, classes=[], end2end=False):
+    def inference(self, img, iou=0.45, conf=0.25, classes=[], end2end=False) -> tuple:
         cuda_img, ratio = TensorRTEngine.preprocess(img, self.imgsz)
         self.inputs[0]['host'] = np.ravel(cuda_img)
         # copy inputs to GPU
@@ -295,7 +292,7 @@ class TensorRTEngine(object):
         return boxes, scores, cls_inds
 
     @staticmethod
-    def postprocess(predictions, ratio, iou_thr, conf_thr):
+    def postprocess(predictions, ratio, iou_thr, conf_thr) -> np.ndarray:
         boxes = predictions[:, :4]
         scores = predictions[:, 4:]
         boxes_xyxy = np.ones_like(boxes)
@@ -309,7 +306,7 @@ class TensorRTEngine(object):
         return dets
 
     @staticmethod
-    def nms(boxes, scores, iou_thr):
+    def nms(boxes, scores, iou_thr) -> list:
         """Single class NMS implemented in NumPy"""
         x1 = boxes[:, 0]
         y1 = boxes[:, 1]
@@ -339,7 +336,7 @@ class TensorRTEngine(object):
         return keep
 
     @staticmethod
-    def multiclass_nms(boxes, scores, iou_thr, conf_thr):
+    def multiclass_nms(boxes, scores, iou_thr, conf_thr) -> np.ndarray:
         """Multiclass NMS implemented in NumPy"""
         final_dets = []
         num_classes = scores.shape[1]
@@ -363,7 +360,7 @@ class TensorRTEngine(object):
         return np.concatenate(final_dets, 0)
 
     @staticmethod
-    def preprocess(image, input_size):  # imgsz, size of input image as integer [W, H]
+    def preprocess(image, input_size) -> tuple:  # imgsz, size of input image as integer [W, H]
         # padded_img = np.zeros((input_size[1], input_size[0], 3), dtype=np.uint8)  # HWC (640x640x3)
         # ratio = min(input_size[0]/image.shape[1], input_size[1]/image.shape[0])  # ratio=min, (padded_img) strech the least or shrink the most
         ratio = max(input_size[0] / image.shape[1], input_size[1] / image.shape[0])  # ratio=max, (cropped_img) strech the most or shrink the least
