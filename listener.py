@@ -38,14 +38,13 @@ class InputListener:
         if key == keyboard.Key.shift:
             self.hold_active = True
             if not prev_hold_state:
-                self.logger.info("Shift hold: ON")
+                self.logger.debug("Shift hold: ON")
 
         if key == keyboard.KeyCode.from_char(self.args.toggle_key):
             self.toggle_active = not self.toggle_active
 
         if key == keyboard.Key.home:
             self.shutdown = True
-            self.logger.info("Shutting down...")
 
     def on_key_release(self, key) -> None:
         """
@@ -56,7 +55,7 @@ class InputListener:
         """
         if key == keyboard.Key.shift:
             self.hold_active = False
-            self.logger.info("Shift hold: OFF")
+            self.logger.debug("Shift hold: OFF")
 
     def on_mouse_click(self, x, y, button, pressed):
         if button == mouse.Button.left:
