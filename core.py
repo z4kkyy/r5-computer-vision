@@ -46,8 +46,8 @@ class r5CVCore:
         self.width = 0
         # these three variables cannot be changed by the user
         self.auto_fire = False
-        self.left_lock = False  # lock on target when the left mouse button is pressed
-        self.right_lock = False  # lock when pressing the right mouse button (scoping)
+        # self.left_lock = False  # lock on target when the left mouse button is pressed
+        # self.right_lock = False  # lock when pressing the right mouse button (scoping)
 
         self.fired_time = time.time()
 
@@ -62,6 +62,11 @@ class r5CVCore:
         self.integral = np.array([0., 0.])
         self.backforce = 0
         self.aim_fov = 4 / 3
+
+        # debug
+        self.exec_count = 0
+        self.capture_time = 0
+        self.inference_time = 0
 
     def load_model(self) -> None:
         model_path = os.path.join(self.args.model_dir, self.args.model_name)
@@ -96,6 +101,7 @@ class r5CVCore:
             self.width = -1
             self.last_destination = self.destination  # save the last destination
             self.destination = np.array([-1, -1])
+            self.logger.debug(f"Detection: {0:2d}, Destination: {self.destination}")
         else:
             self.mouse_position = np.array(mouse.Controller().position)
 
@@ -103,6 +109,7 @@ class r5CVCore:
             boxes_center[:, 1] = (
                 # boxes[:, 1] * 0.6 + boxes[:, 3] * 0.4  # torso
                 boxes[:, 1] * 0.7 + boxes[:, 3] * 0.3  # chest
+                # boxes[:, 1] * 0.85 + boxes[:, 3] * 0.15
             )
 
             crop_size = 540 / win32api.GetSystemMetrics(1)
@@ -119,6 +126,8 @@ class r5CVCore:
             self.last_destination = self.destination
             self.destination = boxes_center[np.argmin(distance)].astype(int)
 
+            self.logger.debug(f"Detection: {num_boxes:2d}, Destination: {self.destination}")
+
     def pid_control(self, error) -> np.ndarray:
         self.integral += error
         derivative = error - self.pre_error
@@ -129,14 +138,21 @@ class r5CVCore:
         return output.astype(int)
 
     def move_mouse(self, key_state, mouse_state) -> None:
-        hold_active, toggle_active, _ = key_state
-        mouse_left_active, mouse_right_active = mouse_state
-        detecting = hold_active or toggle_active
+        hold_state, toggle_state_1, toggle_state_2, _ = key_state
+        mouse_left_state, _, mouse_right_toggle_state = mouse_state
+
+        detecting = hold_state or toggle_state_1
+        if toggle_state_2:
+            if mouse_right_toggle_state:
+                detecting = True
+        # print("detecting: ", detecting)
 
         if not detecting:
             self.pre_error = np.array([0., 0.])
             self.integral = np.array([0., 0.])
             return
+
+        self.logger.debug("Detecting: True")
 
         if self.destination[0] == -1:
             if self.last_destination[0] == -1:
@@ -167,13 +183,13 @@ class r5CVCore:
             # move[0] * last_mv[0] >= 0  # ensures tracking
 
             # scope fire
-            if (hold_active and not self.right_lock and mouse_right_active and not mouse_left_active and norm <= self.width * 2 / 3 and move[0] * last_move[0] >= 0):
+            if (hold_state and not toggle_state_2 and mouse_right_toggle_state and not mouse_left_state and norm <= self.width * 2 / 3 and move[0] * last_move[0] >= 0):
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
                 self.fired_time = time.time()
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
 
             # hip fire
-            elif (((hold_active and not mouse_right_active) or (self.right_lock and mouse_right_active and not mouse_left_active)) and norm <= self.width * 3 / 4 and move[0] * last_move[0] >= 0):
+            elif (((hold_state and not mouse_right_toggle_state) or (toggle_state_2 and mouse_right_toggle_state and not mouse_left_state)) and norm <= self.width * 3 / 4 and move[0] * last_move[0] >= 0):
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
                 self.fired_time = time.time()
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
@@ -193,23 +209,57 @@ class r5CVCore:
             return
 
     def execute(self, key_state, mouse_state) -> None:
-        captured_image = self.camera.capture()
+        self.exec_count += 1
 
+        start_time = time.time()
+        captured_image = self.camera.capture()
+        self.capture_time += time.time() - start_time
+
+        start_time = time.time()
         if self.args.model_name.endswith(".engine"):
             boxes, scores, classes = self.predict_TRT(captured_image)
 
         elif self.args.model_name.endswith(".pt"):
-            # TODO: Check this part
             boxes = self.predict(captured_image).boxes
-            boxes = boxes[boxes[:].cls == self.args.target_index].cpu().xyxy.numpy()
+            boxes = boxes[boxes[:].cls == 1].cpu().xyxy.numpy()  # 0: "Ally", 1: "Enemy", 2: "Tag"
         elif self.args.model_name.endswith("omnx."):
-            pass
+            # .omnx file must be converted to .engine file
+            self.logger.error("ONNX model is not supported. Please convert it to TensorRT engine format.")
+            sys.exit()
         else:
             self.logger.error("Invalid model format. Shutting down.")
             sys.exit()
 
+        for i in range(0, boxes.shape[0]):
+            break  # NOTE: As of now, nothing is shown on the screen
+            self.show_target([
+                int(boxes[i, 0]) + self.camera.x_offset,
+                int(boxes[i, 1]) + self.camera.y_offset,
+                int(boxes[i, 2]) + self.camera.x_offset,
+                int(boxes[i, 3]) + self.camera.y_offset
+            ])
+
         self.calc_mouse_redirection(boxes)
         self.move_mouse(key_state, mouse_state)
+
+        self.inference_time += time.time() - start_time
+
+        if self.exec_count % 1000 == 0:
+            self.logger.info(f"Capture: {self.capture_time:.2f}ms, Inference: {self.inference_time:.2f}ms")
+            self.capture_time = 0
+
+    def show_target(self, box) -> None:  # FIXME: This function is not working
+        hwnd = win32gui.GetDesktopWindow()
+        hwndDC = win32gui.GetDC(hwnd)
+        pen = win32gui.CreatePen(win32con.PS_SOLID, 3, win32api.RGB(255, 0, 255))
+        brush = win32gui.GetStockObject(win32con.NULL_BRUSH)
+
+        win32gui.SelectObject(hwndDC, pen)
+        win32gui.SelectObject(hwndDC, brush)
+        win32gui.Rectangle(hwndDC, box[0], box[1], box[2], box[3])
+
+        win32gui.ReleaseDC(hwnd, hwndDC)
+        return
 
 
 class TensorRTEngine(object):
