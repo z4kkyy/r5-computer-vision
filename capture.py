@@ -13,10 +13,9 @@ class Capture:
         screen_width = win32api.GetSystemMetrics(0)
         screen_height = win32api.GetSystemMetrics(1)
 
-        # the portion of the screen to capture, 1/2 for 1080p
-        # must be integer
-        crop_height = 540    # does not work if 640
-        crop_width = 540 * screen_width // screen_height
+        # the portion of the screen to capture, 640 x 640 square in the center of the screen
+        crop_height = 640
+        crop_width = 640
 
         # the offset of the window
         # must be integer

@@ -112,12 +112,9 @@ class r5CVCore:
                 # boxes[:, 1] * 0.85 + boxes[:, 3] * 0.15
             )
 
-            crop_size = 540 / win32api.GetSystemMetrics(1)
             # map the box from the image coordinate to the screen coordinate
-            start_point = self.screen_center - self.screen_size[1] * crop_size / 2
-            start_point = list(map(int, start_point))
-            boxes_center[:, 0] = boxes_center[:, 0] + start_point[0]
-            boxes_center[:, 1] = boxes_center[:, 1] + start_point[1]
+            boxes_center[:, 0] = boxes_center[:, 0] + self.camera.x_offset
+            boxes_center[:, 1] = boxes_center[:, 1] + self.camera.y_offset
 
             # find the nearest box center
             distance = np.linalg.norm(boxes_center - self.mouse_position, axis=-1)
@@ -231,7 +228,7 @@ class r5CVCore:
             sys.exit()
 
         for i in range(0, boxes.shape[0]):
-            break  # NOTE: As of now, nothing is shown on the screen
+            break  # NOTE: Box is shown only when using borderless window or windowed mode
             self.show_target([
                 int(boxes[i, 0]) + self.camera.x_offset,
                 int(boxes[i, 1]) + self.camera.y_offset,
