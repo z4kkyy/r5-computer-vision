@@ -8,3 +8,4 @@ pynput
 pywin32
 comtypes
 dxcam
+screeninfo
