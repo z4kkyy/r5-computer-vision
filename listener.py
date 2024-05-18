@@ -8,12 +8,14 @@ class InputListener:
         self.logger = logging.getLogger("r5CV")
         self.args = args
         # Initialize key states
-        self.hold_active = False
-        self.toggle_active = False
+        self.hold_state = False
+        self.toggle_state_1 = False  # while shooting
+        self.toggle_state_2 = False  # while aiming down sight
         self.shutdown = False
         # Initialize mouse states
-        self.mouse_left_active = False
-        self.mouse_right_active = False
+        self.mouse_left_state = False
+        self.mouse_right_state = False
+        self.ads_now = False  # whether aiming down sight or not
 
     def start_listener(self) -> None:
         self.keyboard_listener = keyboard.Listener(
@@ -28,20 +30,31 @@ class InputListener:
     def on_key_press(self, key) -> None:
         """
         Handle key press events.
-        if key is shift, set hold_active to True.
-        if key is y, toggle toggle_active.
+        if key is shift, set hold_state to True.
+        if key is y, toggle toggle_state.
         if key is home, set shutdown to True.
 
         :param key: key pressed
         """
-        prev_hold_state = self.hold_active
+        prev_hold_state = self.hold_state
         if key == keyboard.Key.shift:
-            self.hold_active = True
+            self.hold_state = True
             if not prev_hold_state:
-                self.logger.debug("Shift hold: ON")
+                self.logger.debug("Holding shift starts...")
 
-        if key == keyboard.KeyCode.from_char(self.args.toggle_key):
-            self.toggle_active = not self.toggle_active
+        if key == keyboard.KeyCode.from_char(self.args.toggle_key_1):
+            self.toggle_state_1 = not self.toggle_state_1
+            state = "ON" if self.toggle_state_1 else "OFF"
+            self.logger.debug(f"Toggle 1 state: {state}")
+
+        if key == keyboard.KeyCode.from_char(self.args.toggle_key_2):
+            self.toggle_state_2 = not self.toggle_state_2
+            state = "ON" if self.toggle_state_2 else "OFF"
+            self.logger.debug(f"Toggle 2 state: {state}")
+
+        if key == keyboard.KeyCode.from_char("h"):
+            # Adjust polarity of the ads state
+            self.ads_now = not self.ads_now
 
         if key == keyboard.Key.home:
             self.shutdown = True
@@ -49,39 +62,42 @@ class InputListener:
     def on_key_release(self, key) -> None:
         """
         Handle key release events.
-        if key is shift, set hold_active to False.
+        if key is shift, set hold_state to False.
 
         :param key: key released
         """
         if key == keyboard.Key.shift:
-            self.hold_active = False
-            self.logger.debug("Shift hold: OFF")
+            self.hold_state = False
+            self.logger.debug("Holding shift ends...")
 
-    def on_mouse_click(self, x, y, button, pressed):
+    def on_mouse_click(self, x, y, button, pressed) -> None:
         if button == mouse.Button.left:
             if pressed:
-                self.mouse_left_active = True
+                self.mouse_left_state = True
             else:
-                self.mouse_left_active = False
+                self.mouse_left_state = False
 
         if button == mouse.Button.right:
             if pressed:
-                self.mouse_right_active = True
+                self.mouse_right_state = True
+                self.ads_now = not self.ads_now
+                state = "ON" if self.ads_now else "OFF"
+                self.logger.debug(f"Ads state: {state}")
             else:
-                self.mouse_right_active = False
+                self.mouse_right_state = False
 
     def get_key_state(self) -> tuple:
         """
         Get the current state of the keys.
 
-        :return: hold_active, toggle_active, shutdown
+        :return: hold_state, toggle_state, shutdown
         """
-        return self.hold_active, self.toggle_active, self.shutdown
+        return self.hold_state, self.toggle_state_1, self.toggle_state_2, self.shutdown
 
     def get_mouse_state(self) -> tuple:
         """
         Get the current state of the mouse buttons.
 
-        :return: mouse_left_active, mouse_right_active
+        :return: mouse_left_state, mouse_right_state
         """
-        return self.mouse_left_active, self.mouse_right_active
+        return self.mouse_left_state, self.mouse_right_state, self.ads_now
