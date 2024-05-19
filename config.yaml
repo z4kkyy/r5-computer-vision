@@ -1,0 +1,13 @@
+version: 1
+model_name: "best_8s.engine"
+model_dir: "./model"
+toggle_key_1: "y"
+toggle_key_2: "y"
+hold_key: "Shift"
+iou_threshold: 0.8
+conf_threshold: 0.6
+# target_index: 1
+use_pid: true
+Kp: 0.35
+Ki: 0.02
+Kd: 0.3

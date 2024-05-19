@@ -4,9 +4,9 @@ from pynput import keyboard, mouse
 
 
 class InputListener:
-    def __init__(self, args) -> None:
+    def __init__(self, config) -> None:
         self.logger = logging.getLogger("r5CV")
-        self.args = args
+        self.config = config
         # Initialize key states
         self.hold_state = False
         self.toggle_state_1 = False  # while shooting
@@ -42,12 +42,12 @@ class InputListener:
             if not prev_hold_state:
                 self.logger.debug("Holding shift starts...")
 
-        if key == keyboard.KeyCode.from_char(self.args.toggle_key_1):
+        if key == keyboard.KeyCode.from_char(self.config["toggle_key_1"]):
             self.toggle_state_1 = not self.toggle_state_1
             state = "ON" if self.toggle_state_1 else "OFF"
             self.logger.debug(f"Toggle 1 state: {state}")
 
-        if key == keyboard.KeyCode.from_char(self.args.toggle_key_2):
+        if key == keyboard.KeyCode.from_char(self.config["toggle_key_2"]):
             self.toggle_state_2 = not self.toggle_state_2
             state = "ON" if self.toggle_state_2 else "OFF"
             self.logger.debug(f"Toggle 2 state: {state}")
