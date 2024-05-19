@@ -28,10 +28,10 @@ class r5CVCore:
         self.trt_model = None
 
         # initialize the model
-        self.logger.info(f"Loading the model: {self.args.model_name}")
-        if self.args.model_name.endswith(".engine"):
+        self.logger.info(f"Loading the model: {self.config['model_name']}")
+        if self.config["model_name"].endswith(".engine"):
             self.load_TRT_model()
-        elif self.args.model_name.endswith(".pt"):
+        elif self.config["model_name"].endswith(".pt"):
             self.load_model()
 
         # set variables
@@ -69,11 +69,11 @@ class r5CVCore:
         self.inference_time = 0
 
     def load_model(self) -> None:
-        model_path = os.path.join(self.args.model_dir, self.args.model_name)
+        model_path = os.path.join(self.config["model_dir"], self.config["model_name"])
         self.model = YOLO(model_path)
 
     def load_TRT_model(self) -> None:
-        engine_path = os.path.join(self.args.model_dir, self.args.model_name)
+        engine_path = os.path.join(self.config["model_dir"], self.config["model_name"])
         self.trt_model = TensorRTEngine(engine_path)
 
     def predict(self, image) -> np.ndarray:
@@ -213,13 +213,14 @@ class r5CVCore:
         self.capture_time += time.time() - start_time
 
         start_time = time.time()
-        if self.args.model_name.endswith(".engine"):
+
+        if self.config["model_name"].endswith(".engine"):
             boxes, scores, classes = self.predict_TRT(captured_image)
 
-        elif self.args.model_name.endswith(".pt"):
+        elif self.config["model_name"].endswith(".pt"):
             boxes = self.predict(captured_image).boxes
             boxes = boxes[boxes[:].cls == 1].cpu().xyxy.numpy()  # 0: "Ally", 1: "Enemy", 2: "Tag"
-        elif self.args.model_name.endswith("omnx."):
+        elif self.config["model_name"].endswith("omnx."):
             # .omnx file must be converted to .engine file
             self.logger.error("ONNX model is not supported. Please convert it to TensorRT engine format.")
             sys.exit()
@@ -228,7 +229,7 @@ class r5CVCore:
             sys.exit()
 
         for i in range(0, boxes.shape[0]):
-            break  # NOTE: Box is shown only when using borderless window or windowed mode
+            # NOTE: Box is shown only when using borderless window or windowed mode
             self.show_target([
                 int(boxes[i, 0]) + self.camera.x_offset,
                 int(boxes[i, 1]) + self.camera.y_offset,
