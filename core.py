@@ -1,8 +1,9 @@
 import json
 import logging
 import os
-import sys
 import time
+# import sys
+from collections import deque
 
 import cv2
 import numpy as np
@@ -25,30 +26,28 @@ class r5CVCore:
         self.logger = logging.getLogger("r5CV")
 
         self.model = None
-        self.trt_model = None
+
+        self.screen_capture_times = deque(maxlen=1000)
+        self.object_detection_times = deque(maxlen=1000)
 
         # initialize the model
         self.logger.info(f"Loading the model: {self.config['model_name']}")
-        if self.config["model_name"].endswith(".engine"):
-            self.load_TRT_model()
-        elif self.config["model_name"].endswith(".pt"):
-            self.load_model()
 
-        # set variables
+        self.load_model()
+
+        # mouse and screen information
         self.screen_size = np.array([
             win32api.GetSystemMetrics(0),
             win32api.GetSystemMetrics(1)
         ])
         self.screen_center = self.screen_size // 2
+
+        # initial values
         self.destination = self.screen_center
         self.last_destination = self.destination
 
         self.width = 0
-        # these three variables cannot be changed by the user
-        self.auto_fire = False
-        # self.left_lock = False  # lock on target when the left mouse button is pressed
-        # self.right_lock = False  # lock when pressing the right mouse button (scoping)
-
+        self.auto_fire = False  # auto fire is disabled by default
         self.fired_time = time.time()
 
         # scale: the ratio of the screen resolution to the default resolution (96 dpi)
@@ -56,44 +55,57 @@ class r5CVCore:
         self.mouse_position = np.array(mouse.Controller().position)
         self.mouse_vector = np.array([0., 0.])
 
-        # PID control
+        # PID control variables
         self.pre_error = np.array([0., 0.])
-        # self.error = np.array([0., 0.])
         self.integral = np.array([0., 0.])
         self.backforce = 0
         self.aim_fov = 4 / 3
 
-        # debug
+        # debug variables
         self.exec_count = 0
         self.capture_time = 0
         self.inference_time = 0
+        self.device_control_time = 0
 
     def load_model(self) -> None:
-        model_path = os.path.join(self.config["model_dir"], self.config["model_name"])
-        self.model = YOLO(model_path)
-
-    def load_TRT_model(self) -> None:
-        engine_path = os.path.join(self.config["model_dir"], self.config["model_name"])
-        self.trt_model = TensorRTEngine(engine_path)
+        model_name = self.config["model_name"]
+        if model_name.endswith(".engine"):
+            model_path = os.path.join(self.config["model_dir"], self.config["model_name"])
+            self.model = TensorRTEngine(model_path)
+        elif model_name.endswith(".pt"):
+            model_path = os.path.join(self.config["model_dir"], self.config["model_name"])
+            self.model = YOLO(model_path)
 
     def predict(self, image) -> np.ndarray:
-        results = self.model(
-            image,
-            verbose=self.args.verbose,
-            half=True,
-            iou=self.config["iou_threshold"],
-            conf=self.config["conf_threshold"],
-        )
-        return results[0]
+        start_time = time.time()
 
-    def predict_TRT(self, image) -> tuple:
-        boxes, scores, cls_indices = self.trt_model.inference(
-            image,
-            iou=self.config["iou_threshold"],
-            conf=self.config["conf_threshold"],
-            classes=[1, 2]  # 1: Ally, 2: Enemy
-        )
-        return boxes, scores, cls_indices
+        model_name = self.config["model_name"]
+        if model_name.endswith(".engine"):
+            boxes, scores, cls_indices = self.model.inference(
+                image,
+                iou=self.config["iou_threshold"],
+                conf=self.config["conf_threshold"],
+                classes=[1, 2]  # 1: Ally, 2: Enemy
+            )
+            # return boxes, scores, cls_indices
+        elif model_name.endswith(".pt"):
+            results = self.model(
+                image,
+                verbose=self.args.verbose,
+                half=True,
+                iou=self.config["iou_threshold"],
+                conf=self.config["conf_threshold"],
+            )
+            boxes = results[0].boxes
+            boxes = boxes[boxes[:].cls == 1].cpu().xyxy.numpy()
+
+        self.inference_time += time.time() - start_time
+
+        if self.exec_count % 1000 == 0:
+            self.logger.info(f"Inference: {self.inference_time:.2f}ms")
+            self.inference_time = 0
+
+        return boxes
 
     def calc_mouse_redirection(self, boxes) -> None:
         num_boxes = boxes.shape[0]
@@ -112,9 +124,9 @@ class r5CVCore:
                 # boxes[:, 1] * 0.85 + boxes[:, 3] * 0.15
             )
 
-            # map the box from the image coordinate to the screen coordinate
-            boxes_center[:, 0] = boxes_center[:, 0] + self.camera.x_offset
-            boxes_center[:, 1] = boxes_center[:, 1] + self.camera.y_offset
+            # map the box from the image coordinate to the screen coordinate by adding the offset
+            boxes_center[:, 0] += self.camera.x_offset
+            boxes_center[:, 1] += self.camera.y_offset
 
             # find the nearest box center
             distance = np.linalg.norm(boxes_center - self.mouse_position, axis=-1)
@@ -136,13 +148,12 @@ class r5CVCore:
 
     def move_mouse(self, key_state, mouse_state) -> None:
         hold_state, toggle_state_1, toggle_state_2, _ = key_state
-        mouse_left_state, _, mouse_right_toggle_state = mouse_state
+        mouse_left_state, mouse_right_state = mouse_state
 
         detecting = hold_state or toggle_state_1
-        if toggle_state_2:
-            if mouse_right_toggle_state:
+        if toggle_state_2 and mouse_right_state:
+            if mouse_right_state:
                 detecting = True
-        # print("detecting: ", detecting)
 
         if not detecting:
             self.pre_error = np.array([0., 0.])
@@ -165,7 +176,7 @@ class r5CVCore:
         if norm > self.width * self.aim_fov:
             return
 
-        # use proportional–integral–derivative control
+        # Use proportional–integral–derivative control
         if self.config["use_pid"]:
             move = self.pid_control(self.mouse_vector)
             win32api.mouse_event(
@@ -180,20 +191,28 @@ class r5CVCore:
             # move[0] * last_mv[0] >= 0  # ensures tracking
 
             # scope fire
-            if (hold_state and not toggle_state_2 and mouse_right_toggle_state and not mouse_left_state and norm <= self.width * 2 / 3 and move[0] * last_move[0] >= 0):
+            if (hold_state
+                    and not toggle_state_2
+                    and mouse_right_state
+                    and not mouse_left_state
+                    and norm <= self.width * 2 / 3
+                    and move[0] * last_move[0] >= 0):
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
                 self.fired_time = time.time()
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-
             # hip fire
-            elif (((hold_state and not mouse_right_toggle_state) or (toggle_state_2 and mouse_right_toggle_state and not mouse_left_state)) and norm <= self.width * 3 / 4 and move[0] * last_move[0] >= 0):
+            elif (((hold_state and not mouse_right_state)
+                    or (toggle_state_2 and mouse_right_state and not mouse_left_state))
+                    and norm <= self.width * 3 / 4
+                    and move[0] * last_move[0] >= 0):
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
                 self.fired_time = time.time()
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
             return
 
         # if destination is close to the center, do not move the mouse
-        if norm <= 2 or (self.destination[0] == self.screen_center[0] and self.destination[1] == self.screen_center[1]):
+        if (norm <= 2
+                or (self.destination[0] == self.screen_center[0] and self.destination[1] == self.screen_center[1])):
             return
 
         # if the destination is close to the center, move the mouse slowly   TODO: Check this part
@@ -208,43 +227,34 @@ class r5CVCore:
     def execute(self, key_state, mouse_state) -> None:
         self.exec_count += 1
 
-        start_time = time.time()
+        # capture the screen
         captured_image = self.camera.capture()
-        self.capture_time += time.time() - start_time
+
+        # execute the inference process
+        boxes = self.predict(captured_image)
+
+        # show the target box
+        # NOTE: boxes is shown only when using borderless window or windowed mode
+        if self.config["draw_boxes"]:
+            for i in range(0, boxes.shape[0]):
+                self.show_target([
+                    int(boxes[i, 0]) + self.camera.x_offset,
+                    int(boxes[i, 1]) + self.camera.y_offset,
+                    int(boxes[i, 2]) + self.camera.x_offset,
+                    int(boxes[i, 3]) + self.camera.y_offset
+                ])
 
         start_time = time.time()
 
-        if self.config["model_name"].endswith(".engine"):
-            boxes, scores, classes = self.predict_TRT(captured_image)
-
-        elif self.config["model_name"].endswith(".pt"):
-            boxes = self.predict(captured_image).boxes
-            boxes = boxes[boxes[:].cls == 1].cpu().xyxy.numpy()  # 0: "Ally", 1: "Enemy", 2: "Tag"
-        elif self.config["model_name"].endswith("omnx."):
-            # .omnx file must be converted to .engine file
-            self.logger.error("ONNX model is not supported. Please convert it to TensorRT engine format.")
-            sys.exit()
-        else:
-            self.logger.error("Invalid model format. Shutting down.")
-            sys.exit()
-
-        for i in range(0, boxes.shape[0]):
-            # NOTE: Box is shown only when using borderless window or windowed mode
-            self.show_target([
-                int(boxes[i, 0]) + self.camera.x_offset,
-                int(boxes[i, 1]) + self.camera.y_offset,
-                int(boxes[i, 2]) + self.camera.x_offset,
-                int(boxes[i, 3]) + self.camera.y_offset
-            ])
-
+        # mouse redirection
         self.calc_mouse_redirection(boxes)
         self.move_mouse(key_state, mouse_state)
 
-        self.inference_time += time.time() - start_time
+        self.device_control_time += time.time() - start_time
 
         if self.exec_count % 1000 == 0:
-            self.logger.info(f"Capture: {self.capture_time:.2f}ms, Inference: {self.inference_time:.2f}ms")
-            self.capture_time = 0
+            self.logger.info(f"Device control: {self.device_control_time:.2f}ms")
+            self.device_control_time = 0
 
     def show_target(self, box) -> None:  # FIXME: This function is not working
         hwnd = win32gui.GetDesktopWindow()

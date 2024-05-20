@@ -15,9 +15,11 @@ class InputListener:
         # Initialize mouse states
         self.mouse_left_state = False
         self.mouse_right_state = False
-        self.ads_now = False  # whether aiming down sight or not
 
     def start_listener(self) -> None:
+        """
+        Start the input listener.
+        """
         self.keyboard_listener = keyboard.Listener(
             on_press=self.on_key_press,
             on_release=self.on_key_release
@@ -28,14 +30,6 @@ class InputListener:
         ).start()
 
     def on_key_press(self, key) -> None:
-        """
-        Handle key press events.
-        if key is shift, set hold_state to True.
-        if key is y, toggle toggle_state.
-        if key is home, set shutdown to True.
-
-        :param key: key pressed
-        """
         prev_hold_state = self.hold_state
         if key == keyboard.Key.shift:
             self.hold_state = True
@@ -52,7 +46,7 @@ class InputListener:
             state = "ON" if self.toggle_state_2 else "OFF"
             self.logger.debug(f"Toggle 2 state: {state}")
 
-        if key == keyboard.KeyCode.from_char("h"):
+        if key == keyboard.KeyCode.from_char("h"):  # NOTE: Change this key to your preference
             # Adjust polarity of the ads state
             self.ads_now = not self.ads_now
 
@@ -60,12 +54,6 @@ class InputListener:
             self.shutdown = True
 
     def on_key_release(self, key) -> None:
-        """
-        Handle key release events.
-        if key is shift, set hold_state to False.
-
-        :param key: key released
-        """
         if key == keyboard.Key.shift:
             self.hold_state = False
             self.logger.debug("Holding shift ends...")
@@ -80,9 +68,6 @@ class InputListener:
         if button == mouse.Button.right:
             if pressed:
                 self.mouse_right_state = True
-                self.ads_now = not self.ads_now
-                state = "ON" if self.ads_now else "OFF"
-                self.logger.debug(f"Ads state: {state}")
             else:
                 self.mouse_right_state = False
 
@@ -100,4 +85,4 @@ class InputListener:
 
         :return: mouse_left_state, mouse_right_state
         """
-        return self.mouse_left_state, self.mouse_right_state, self.ads_now
+        return self.mouse_left_state, self.mouse_right_state
