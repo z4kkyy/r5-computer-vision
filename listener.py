@@ -7,11 +7,13 @@ class InputListener:
     def __init__(self, config) -> None:
         self.logger = logging.getLogger("r5CV")
         self.config = config
+
         # Initialize key states
         self.hold_state = False
-        self.toggle_state_1 = False  # while shooting
-        self.toggle_state_2 = False  # while aiming down sight
+        self.toggle_state_1 = False  # lock on target
+        self.toggle_state_2 = False  # lock on target when ADS
         self.shutdown = False
+
         # Initialize mouse states
         self.mouse_left_state = False
         self.mouse_right_state = False
@@ -46,10 +48,6 @@ class InputListener:
             state = "ON" if self.toggle_state_2 else "OFF"
             self.logger.debug(f"Toggle 2 state: {state}")
 
-        if key == keyboard.KeyCode.from_char("h"):  # NOTE: Change this key to your preference
-            # Adjust polarity of the ads state
-            self.ads_now = not self.ads_now
-
         if key == keyboard.Key.home:
             self.shutdown = True
 
@@ -72,17 +70,7 @@ class InputListener:
                 self.mouse_right_state = False
 
     def get_key_state(self) -> tuple:
-        """
-        Get the current state of the keys.
-
-        :return: hold_state, toggle_state, shutdown
-        """
         return self.hold_state, self.toggle_state_1, self.toggle_state_2, self.shutdown
 
     def get_mouse_state(self) -> tuple:
-        """
-        Get the current state of the mouse buttons.
-
-        :return: mouse_left_state, mouse_right_state
-        """
         return self.mouse_left_state, self.mouse_right_state

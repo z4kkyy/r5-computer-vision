@@ -1,5 +1,4 @@
 import argparse
-# import json
 import logging
 import logging.config
 import os
@@ -9,7 +8,6 @@ import threading
 from time import time
 
 import cpuinfo
-# import screeninfo
 import torch
 import yaml
 
@@ -110,7 +108,7 @@ if __name__ == "__main__":
 
         # read key and mouse states
         key_state = input_listener.get_key_state()      # hold_state, toggle_state_1, toggle_state_2, shutdown
-        mouse_state = input_listener.get_mouse_state()  # mouse_left_state, mouse_right_state, mouse_right_toggle_state
+        mouse_state = input_listener.get_mouse_state()  # mouse_left_state, mouse_right_state
         if key_state[3]:  # shutdown = True
             logger.info("Shutting down...👋")
             sys.exit()

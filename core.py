@@ -212,7 +212,8 @@ class r5CVCore:
 
         # if destination is close to the center, do not move the mouse
         if (norm <= 2
-                or (self.destination[0] == self.screen_center[0] and self.destination[1] == self.screen_center[1])):
+                or (self.destination[0] == self.screen_center[0]
+                    and self.destination[1] == self.screen_center[1])):
             return
 
         # if the destination is close to the center, move the mouse slowly   TODO: Check this part
@@ -256,7 +257,7 @@ class r5CVCore:
             self.logger.info(f"Device control: {self.device_control_time:.2f}ms")
             self.device_control_time = 0
 
-    def show_target(self, box) -> None:  # FIXME: This function is not working
+    def show_target(self, box) -> None:
         hwnd = win32gui.GetDesktopWindow()
         hwndDC = win32gui.GetDC(hwnd)
         pen = win32gui.CreatePen(win32con.PS_SOLID, 3, win32api.RGB(255, 0, 255))
