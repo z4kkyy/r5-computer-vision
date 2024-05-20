@@ -1,4 +1,4 @@
-# Release Notes: r5-computer-vision
+# r5-computer-vision
 
 This repository is a refactored & updated version of the original Ape-xCV project.
 
