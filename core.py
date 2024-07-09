@@ -59,7 +59,7 @@ class r5CVCore:
         self.pre_error = np.array([0., 0.])
         self.integral = np.array([0., 0.])
         self.backforce = 0
-        self.aim_fov = 4 / 3
+        self.aim_fov = 5 / 3
 
         # debug variables
         self.exec_count = 0
@@ -119,8 +119,8 @@ class r5CVCore:
 
             boxes_center = ((boxes[:, :2] + boxes[:, 2:]) / 2)
             boxes_center[:, 1] = (
-                # boxes[:, 1] * 0.6 + boxes[:, 3] * 0.4  # torso
-                boxes[:, 1] * 0.7 + boxes[:, 3] * 0.3  # chest
+                boxes[:, 1] * 0.65 + boxes[:, 3] * 0.35  # torso
+                # boxes[:, 1] * 0.7 + boxes[:, 3] * 0.3  # chest
                 # boxes[:, 1] * 0.85 + boxes[:, 3] * 0.15
             )
 
@@ -181,11 +181,11 @@ class r5CVCore:
             move = self.pid_control(self.mouse_vector)
             win32api.mouse_event(
                 win32con.MOUSEEVENTF_MOVE,
-                int(move[0]),
+                int(move[0] * 1.2),
                 int(move[1] / 2)
             )
             last_move = self.last_destination - self.mouse_position + self.mouse_vector
-            if not self.auto_fire or time.time() - self.fired_time <= 0.125:
+            if not self.auto_fire or time.time() - self.fired_time <= 0.001:
                 return  # 125ms
             # norm <= width / 2  # higher divisor increases precision but limits fire rate
             # move[0] * last_mv[0] >= 0  # ensures tracking
