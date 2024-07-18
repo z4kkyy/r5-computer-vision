@@ -8,6 +8,7 @@ import threading
 from time import time
 
 import cpuinfo
+import screeninfo
 import torch
 import yaml
 
@@ -52,7 +53,7 @@ if __name__ == "__main__":
     """)
     logger.info("Initializing r5CV...")
     logger.info(f"Python version: {formatted_version} ({bitness})")
-    logger.info(f"Detected CPU: {cpuinfo.get_cpu_info()['brand_raw']}")
+    logger.info(f"Detected CPU: {system_info['brand_raw']}")
     logger.info(f"Detected GPU: {torch.cuda.get_device_name()}")
 
     # if not run on Windows, exit
@@ -60,17 +61,17 @@ if __name__ == "__main__":
         logger.error("r5CV only supports Windows operating system.")
         sys.exit()
 
-    # # if main display is not 1080p, exit
-    # monitors = screeninfo.get_monitors()
-    # monitor_check = False
-    # for monitor in monitors:
-    #     if monitor.width == 1920 and monitor.height == 1080:
-    #         if monitor.is_primary:
-    #             monitor_check = True
-    #             break
-    # if not monitor_check:
-    #     logger.error("r5CV only supports 1080p resolution.")
-    #     sys.exit()
+    # if main display is not 1080p, exit
+    monitors = screeninfo.get_monitors()
+    monitor_check = False
+    for monitor in monitors:
+        if monitor.width == 1920 and monitor.height == 1080:
+            if monitor.is_primary:
+                monitor_check = True
+                break
+    if not monitor_check:
+        logger.error("r5CV only supports 1080p resolution.")
+        sys.exit()
 
     # load config
     with open(f"{os.path.realpath(os.path.dirname(__file__))}/config.yaml", "rt") as file:

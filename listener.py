@@ -9,6 +9,11 @@ class InputListener:
         self.config = config
 
         # Initialize key states
+        self.hold_key = keyboard.Key.shift
+        # self.hold_key = keyboard.KeyCode.from_char("y")
+        self.toggle_key_1 = keyboard.KeyCode.from_char(self.config["toggle_key_1"])
+        # self.toggle_key_1 = keyboard.Key.shift
+        self.toggle_key_2 = keyboard.KeyCode.from_char(self.config["toggle_key_2"])
         self.hold_state = False
         self.toggle_state_1 = False  # lock on target
         self.toggle_state_2 = False  # lock on target when ADS
@@ -33,17 +38,17 @@ class InputListener:
 
     def on_key_press(self, key) -> None:
         prev_hold_state = self.hold_state
-        if key == keyboard.Key.shift:
+        if key == self.hold_key:
             self.hold_state = True
             if not prev_hold_state:
                 self.logger.debug("Holding shift starts...")
 
-        if key == keyboard.KeyCode.from_char(self.config["toggle_key_1"]):
+        if key == self.toggle_key_1:
             self.toggle_state_1 = not self.toggle_state_1
             state = "ON" if self.toggle_state_1 else "OFF"
             self.logger.debug(f"Toggle 1 state: {state}")
 
-        if key == keyboard.KeyCode.from_char(self.config["toggle_key_2"]):
+        if key == self.toggle_key_2:
             self.toggle_state_2 = not self.toggle_state_2
             state = "ON" if self.toggle_state_2 else "OFF"
             self.logger.debug(f"Toggle 2 state: {state}")
@@ -52,7 +57,7 @@ class InputListener:
             self.shutdown = True
 
     def on_key_release(self, key) -> None:
-        if key == keyboard.Key.shift:
+        if key == self.hold_key:
             self.hold_state = False
             self.logger.debug("Holding shift ends...")
 
