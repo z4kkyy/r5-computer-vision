@@ -119,7 +119,7 @@ class r5CVCore:
 
             boxes_center = ((boxes[:, :2] + boxes[:, 2:]) / 2)
             boxes_center[:, 1] = (
-                boxes[:, 1] * 0.65 + boxes[:, 3] * 0.35  # torso
+                boxes[:, 1] * 0.55 + boxes[:, 3] * 0.45  # torso
                 # boxes[:, 1] * 0.7 + boxes[:, 3] * 0.3  # chest
                 # boxes[:, 1] * 0.85 + boxes[:, 3] * 0.15
             )
@@ -133,7 +133,7 @@ class r5CVCore:
             min_index = np.argmin(distance)
             self.width = boxes[min_index, 2] - boxes[min_index, 0]
             self.last_destination = self.destination
-            self.destination = boxes_center[np.argmin(distance)].astype(int)
+            self.destination = boxes_center[min_index].astype(int)
 
             self.logger.debug(f"Detection: {num_boxes:2d}, Destination: {self.destination}")
 
@@ -173,7 +173,7 @@ class r5CVCore:
             self.mouse_vector = (self.destination - self.mouse_position) / self.scale
 
         norm = np.linalg.norm(self.mouse_vector)
-        if norm > self.width * self.aim_fov:
+        if norm > self.width * self.aim_fov * 1.5:
             return
 
         # Use proportional–integral–derivative control
@@ -181,8 +181,8 @@ class r5CVCore:
             move = self.pid_control(self.mouse_vector)
             win32api.mouse_event(
                 win32con.MOUSEEVENTF_MOVE,
-                int(move[0] * 1.2),
-                int(move[1] / 2)
+                int(move[0] * 1.8),
+                int(move[1] * 1.5)
             )
             last_move = self.last_destination - self.mouse_position + self.mouse_vector
             if not self.auto_fire or time.time() - self.fired_time <= 0.001:
@@ -195,7 +195,7 @@ class r5CVCore:
                     and not toggle_state_2
                     and mouse_right_state
                     and not mouse_left_state
-                    and norm <= self.width * 2 / 3
+                    and norm <= self.width * 3 / 3
                     and move[0] * last_move[0] >= 0):
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
                 self.fired_time = time.time()
