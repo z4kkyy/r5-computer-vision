@@ -366,7 +366,6 @@ class TensorRTEngine(object):
 
     @staticmethod
     def nms(boxes, scores, iou_thr) -> list:
-        """Single class NMS implemented in NumPy"""
         x1 = boxes[:, 0]
         y1 = boxes[:, 1]
         x2 = boxes[:, 2]
@@ -396,7 +395,6 @@ class TensorRTEngine(object):
 
     @staticmethod
     def multiclass_nms(boxes, scores, iou_thr, conf_thr) -> np.ndarray:
-        """Multiclass NMS implemented in NumPy"""
         final_dets = []
         num_classes = scores.shape[1]
         for cls_ind in range(num_classes):
@@ -420,7 +418,7 @@ class TensorRTEngine(object):
 
     @staticmethod
     def preprocess(image, input_size) -> tuple:  # imgsz, size of input image as integer [W, H]
-        # padded_img = np.zeros((input_size[1], input_size[0], 3), dtype=np.uint8)  # HWC (640x640x3)
+        # padded_img = np.zeros((input_size[1], input_size[0], 3), dtype=np.uint8)
         # ratio = min(input_size[0]/image.shape[1], input_size[1]/image.shape[0])  # ratio=min, (padded_img) strech the least or shrink the most
         ratio = max(input_size[0] / image.shape[1], input_size[1] / image.shape[0])  # ratio=max, (cropped_img) strech the most or shrink the least
         resized_img = cv2.resize(image, (int(image.shape[1] * ratio), int(image.shape[0] * ratio)), interpolation=cv2.INTER_LINEAR)  # cv2.resize(image, (width, height), interpolation)
