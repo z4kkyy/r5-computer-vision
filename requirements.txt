@@ -1,11 +1,10 @@
-# Ultralytics requirements
-# Usage: pip install -r requirements.txt
-#numpy==1.23.1
-#torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu121
-pycuda
-ultralytics
-pynput
-pywin32
-comtypes
-dxcam
-screeninfo
+dxcam==0.0.5
+numpy==1.24.3
+py_cpuinfo==9.0.0
+pycuda==2024.1
+pynput==1.7.7
+pywin32==306
+PyYAML==6.0.1
+screeninfo==0.8.1
+tensorrt==8.6.1
+ultralytics==8.2.12
