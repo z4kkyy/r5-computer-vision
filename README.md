@@ -1,6 +1,6 @@
 # r5-computer-vision
 
-This repository contains a gameplay assistance tool that utilizes advanced computer vision technology. It combines precise object detection using YOLOv8 and DXTensorRT Engine with smooth mouse control using PID control to assist in aim training against dummies (bots) in R5Reloaded, an SDK for creating mods for Apex Legends.
+This repository contains a gameplay assistance tool that utilizes advanced computer vision technology. It combines precise object detection using YOLOv8 and TensorRT Engine with smooth mouse control using PID control to assist in aim training against dummies (bots) in R5Reloaded, an SDK for creating mods for Apex Legends.
 
 In the following video, the mouse is not being moved at all.
 
@@ -65,7 +65,7 @@ Furthermore, this software cannot be used with the official Apex Legends, as the
    ```
 
 6. Export `best_8s.pt` to `best_8s.engine` (if needed):
-   - Press **_[Win+R]_** and enter **cmd** to open a Command Prompt. Then input:
+   - In command prompt, execute the following commands one by one:
    ```shell
    set CUDA_MODULE_LOADING=LAZY
    cd /D C:\TEMP\Ape-xCV\MODEL
@@ -103,7 +103,7 @@ Various parameters can be adjusted in `config.yaml`.
 
 # r5-computer-vision
 
-本レポジトリはCV（コンピュータービジョン）技術を活用したゲームプレイ支援ツールです。YOLOv8およびDXTensorRT Engineによる精密なオブジェクト検出とPID制御を用いた滑らかなマウス制御を組み合わせ、Apex LegendsのMOD作成用のSDKであるR5Reloadedでのダミー（ボット）に対するエイムトレーニングを支援するものです。
+本レポジトリはCV（コンピュータービジョン）技術を活用したゲームプレイ支援ツールです。YOLOv8およびTensorRT Engineによる精密なオブジェクト検出とPID制御を用いた滑らかなマウス制御を組み合わせ、Apex LegendsのMOD作成用のSDKであるR5Reloadedでのダミー（ボット）に対するエイムトレーニングを支援するものです。
 
 ## 注意事項
 
