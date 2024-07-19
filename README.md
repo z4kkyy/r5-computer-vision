@@ -2,6 +2,8 @@
 
 This repository contains a gameplay assistance tool that utilizes advanced computer vision technology. It combines precise object detection using YOLOv8 and DXTensorRT Engine with smooth mouse control using PID control to assist in aim training against dummies (bots) in R5Reloaded, an SDK for creating mods for Apex Legends.
 
+https://github.com/user-attachments/assets/eba14198-0692-45bc-aaab-fb807daf9b98
+
 ## Disclaimer
 
 This software is designed to control mouse input and does not read or write to game binaries. Its use should be limited to aim training against dummies (bots) in R5Reloaded, an SDK for creating mods for Apex Legends. Using it against human players online is ethically problematic and carries a high risk of account banning, thus it is not recommended.
