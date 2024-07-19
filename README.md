@@ -165,7 +165,7 @@ Various parameters can be adjusted in `config.yaml`.
    ```
 
 6. `best_8s.pt`を`best_8s.engine`にエクスポートしてください（必要な場合）:
-   - **_[Win+R]_**を押して**cmd**と入力し、コマンドプロンプトを開いてください。そして以下を入力してください:
+   - コマンドプロンプトで、以下のコマンドを順番に実行してください:
    ```shell
    set CUDA_MODULE_LOADING=LAZY
    cd /D C:\TEMP\Ape-xCV\MODEL
