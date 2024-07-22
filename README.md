@@ -18,10 +18,6 @@ Furthermore, this software cannot be used with the official Apex Legends, as the
 - Non-invasive screen capture technology: Utilizes DirectX to capture frames with ultra-low latency of less than 1ms
 - Precise mouse control using PID control: Achieves natural and smooth aiming movements, replicating human-like behavior
 
-## Installation Instructions
-
-**Note:** The inference model in this project maintains compatibility with [https://github.com/Ape-xCV/Apex-CV-YOLO-v8-Aim-Assist-Bot]. If updated models in the original project are functioning correctly, they can be used in this project as well.
-
 # Installation Instructions
 
 ## Version Checklist:
@@ -116,11 +112,6 @@ Various parameters can be adjusted in `config.yaml`.
 - YOLOv8およびTensorRT Engineを使用したリアルタイムオブジェクト検出：数十ミリ秒単位の高速な検出と高精度なターゲットロックを実現
 - 非侵襲的なスクリーンキャプチャ技術：DirectXを利用し、1ms未満の超低遅延でフレームを取得
 - PID制御を用いた精密なマウス制御：自然で滑らかなエイム動作を実現し、人間の動きに近い挙動を再現
-
-## インストール手順
-
-**注意：** このプロジェクトの推論モデルは[https://github.com/Ape-xCV/Apex-CV-YOLO-v8-Aim-Assist-Bot]との互換性を維持しています。元のプロジェクトにおいて更新されたモデルが正常に機能している場合、本プロジェクトでも使用できます。
-
 
 # インストール手順
 
