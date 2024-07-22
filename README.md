@@ -46,7 +46,7 @@ Furthermore, this software cannot be used with the official Apex Legends, as the
    - From custom installation, check "Add Python to environment path".
    - In command prompt, execute the following commands one by one:
    ```shell
-   cd /D C:\temp\r5-computer-vision
+   cd /D C:\TEMP\r5-computer-vision
    python -m pip install --upgrade pip
    python -m venv r5cv
    .\r5cv\Scripts\activate
@@ -68,7 +68,7 @@ Furthermore, this software cannot be used with the official Apex Legends, as the
    - In command prompt, execute the following commands one by one:
    ```shell
    set CUDA_MODULE_LOADING=LAZY
-   cd /D C:\TEMP\Ape-xCV\MODEL
+   cd /D C:\TEMP\r5-computer-vision\MODEL
    yolo export model=best_8s.pt format=engine opset=12 workspace=7
    ```
 
