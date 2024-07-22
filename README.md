@@ -146,7 +146,7 @@ Various parameters can be adjusted in `config.yaml`.
    - カスタムインストールから、「Add Python to environment path」にチェックを入れてください。
    - コマンドプロンプトで、以下のコマンドを順番に実行してください:
    ```shell
-   cd /D C:\temp\r5-computer-vision
+   cd /D C:\TEMP\r5-computer-vision
    python -m pip install --upgrade pip
    python -m venv r5cv
    .\r5cv\Scripts\activate
@@ -168,7 +168,7 @@ Various parameters can be adjusted in `config.yaml`.
    - コマンドプロンプトで、以下のコマンドを順番に実行してください:
    ```shell
    set CUDA_MODULE_LOADING=LAZY
-   cd /D C:\TEMP\Ape-xCV\MODEL
+   cd /D C:\TEMP\r5-computer-vision\MODEL
    yolo export model=best_8s.pt format=engine opset=12 workspace=7
    ```
 
