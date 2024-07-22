@@ -102,9 +102,9 @@ if __name__ == "__main__":
         # This is the main loop, where the inference is executed.
         # The inference process is executed in every iteration of the loop.
         # Performance:
-        # - Capture: avg. 8.25 ms
-        # - Inference: avg. 18.23 ms (using best_8s.engine on TensorRT)
-        # - Iteration FPS: 51.97 (27.80 ms per frame)
+        # - Capture: avg. 0.67 ms
+        # - Inference: avg. 7.23 ms (using best_8s.engine on TensorRT)
+        # - Iteration FPS: 72.97
         exec_count += 1
 
         # read key and mouse states
