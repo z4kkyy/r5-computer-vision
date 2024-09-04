@@ -6,7 +6,7 @@ import numpy as np
 import win32api
 
 
-# using dxcam (https://github.com/AI-M-BOT/DXcam)
+# using dxcam (https://github.com/ra1nty/DXcam)
 class Capture:
     def __init__(self) -> None:
         """
