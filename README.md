@@ -18,55 +18,14 @@ Furthermore, this software cannot be used with the official Apex Legends, as the
 - Non-invasive screen capture technology: Utilizes DirectX to capture frames with ultra-low latency of less than 1ms
 - Precise mouse control using PID control: Achieves natural and smooth aiming movements, replicating human-like behavior
 
-# Installation Instructions
+## Version Requirements
 
-## Version Checklist:
-
-| CUDA   | cuDNN | TensorRT | PyTorch |
-| :----: | :---: | :------: | :-----: |
-| 12.1   | 8.9.0 | 8.6.1.6  | 2.3.0   |
-
-1. Extract `r5-computer-vision.zip` to **C:\temp\r5-computer-vision**.
-
-2. Install `CUDA 12.1.0` from the [`NVIDIA website`](https://developer.nvidia.com/cuda-12-1-0-download-archive?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exe_local).
-
-3. Install `cuDNN 8.9.0`.
-   - Register for the [`NVIDIA developer program`](https://developer.nvidia.com/login).
-   - Go to the [cuDNN download archive](https://developer.nvidia.com/rdp/cudnn-archive).
-   - Click `Download cuDNN v8.9.0 (April 11th, 2023), for CUDA 12.x`.
-   - Download `Local Installer for Windows (Zip)`.
-   - Unzip `cudnn-windows-x86_64-8.9.0.131_cuda12-archive.zip`.
-   - Copy all three folders (`bin`, `include`, `lib`) and paste them into `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1`.
-
-4. Install `Python 3.11.9 (64-bit)` from the [`Python website`](https://www.python.org/ftp/python/3.10.0/python-3.10.0-amd64.exe).
-   - From custom installation, check "Add Python to environment path".
-   - In command prompt, execute the following commands one by one:
-   ```shell
-   cd /D C:\TEMP\r5-computer-vision
-   python -m pip install --upgrade pip
-   python -m venv r5cv
-   .\r5cv\Scripts\activate
-   pip install -r requirements.txt
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-   ```
-
-5. Install `TensorRT`.
-   - Go to the [NVIDIA TensorRT 8.x Download](https://developer.nvidia.com/nvidia-tensorrt-8x-download) site.
-   - Download `TensorRT 8.6 GA and CUDA 12.0 and 12.1 ZIP Package` from the [NVIDIA website](https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/secure/8.6.1/zip/TensorRT-8.6.1.6.Windows10.x86_64.cuda-12.0.zip).
-   - Extract `TensorRT-8.6.1.6.Windows10.x86_64.cuda-12.0.zip` to **C:\TEMP**.
-   - After TensorRT is added to PATH, close that Command Prompt and open a new one. Then input:
-   ```shell
-   cd /D C:\TEMP\TensorRT-8.6.1.6\python
-   pip install tensorrt-8.6.1-cp310-none-win_amd64.whl
-   ```
-
-6. Export `best_8s.pt` to `best_8s.engine` (if needed):
-   - In command prompt, execute the following commands one by one:
-   ```shell
-   set CUDA_MODULE_LOADING=LAZY
-   cd /D C:\TEMP\r5-computer-vision\MODEL
-   yolo export model=best_8s.pt format=engine opset=12 workspace=7
-   ```
+| Component | Version |
+| :-------: | :-----: |
+| CUDA      | 12.1    |
+| cuDNN     | 8.9.0   |
+| TensorRT  | 10.12.0 |
+| PyTorch   | 2.5.1   |
 
 ## Main Features
 **Operation Flow**: This program runs the following sequence in a loop by executing the `main.py` script:
@@ -113,56 +72,14 @@ Various parameters can be adjusted in `config.yaml`.
 - 非侵襲的なスクリーンキャプチャ技術：DirectXを利用し、1ms未満の超低遅延でフレームを取得
 - PID制御を用いた精密なマウス制御：自然で滑らかなエイム動作を実現し、人間の動きに近い挙動を再現
 
-# インストール手順
+## バージョン要件
 
-## バージョンチェックリスト:
-
-| CUDA   | cuDNN | TensorRT | PyTorch |
-| :----: | :---: | :------: | :-----: |
-| 12.1   | 8.9.0 | 8.6.1.6  | 2.3.0   |
-
-1. `r5-computer-vision.zip`を**C:\temp\r5-computer-vision**に解凍してください。
-
-2. [`NVIDIAのウェブサイト`](https://developer.nvidia.com/cuda-12-1-0-download-archive?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exe_local)から`CUDA 12.1.0`をインストールしてください。
-
-3. `cuDNN 8.9.0`をインストールしてください。
-   - [`NVIDIAデベロッパープログラム`](https://developer.nvidia.com/login)に登録してください。
-   - [cuDNNダウンロードアーカイブ](https://developer.nvidia.com/rdp/cudnn-archive)にアクセスしてください。
-   - `Download cuDNN v8.9.0 (April 11th, 2023), for CUDA 12.x`をクリックしてください。
-   - `Local Installer for Windows (Zip)`をダウンロードしてください。
-   - `cudnn-windows-x86_64-8.9.0.131_cuda12-archive.zip`を解凍してください。
-   - 3つのフォルダ（`bin`、`include`、`lib`）をすべてコピーし、`C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1`に貼り付けてください。
-
-4. [`Pythonウェブサイト`](https://www.python.org/ftp/python/3.10.0/python-3.10.0-amd64.exe)から`Python 3.11.9 (64-bit)`をインストールしてください。
-   - カスタムインストールから、「Add Python to environment path」にチェックを入れてください。
-   - コマンドプロンプトで、以下のコマンドを順番に実行してください:
-   ```shell
-   cd /D C:\TEMP\r5-computer-vision
-   python -m pip install --upgrade pip
-   python -m venv r5cv
-   .\r5cv\Scripts\activate
-   pip install -r requirements.txt
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-   ```
-
-5. `TensorRT`をインストールしてください。
-   - [NVIDIA TensorRT 8.x Download](https://developer.nvidia.com/nvidia-tensorrt-8x-download)にアクセスしてください。
-   - [NVIDIAウェブサイト](https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/secure/8.6.1/zip/TensorRT-8.6.1.6.Windows10.x86_64.cuda-12.0.zip)から`TensorRT 8.6 GA and CUDA 12.0 and 12.1 ZIP Package`をダウンロードしてください。
-   - `TensorRT-8.6.1.6.Windows10.x86_64.cuda-12.0.zip`を**C:\TEMP**に解凍してください。
-   - TensorRTがPATHに追加されたら、そのコマンドプロンプトを閉じて新しいものを開いてください。そして以下を入力してください:
-   ```shell
-   cd /D C:\TEMP\TensorRT-8.6.1.6\python
-   pip install tensorrt-8.6.1-cp310-none-win_amd64.whl
-   ```
-
-6. `best_8s.pt`を`best_8s.engine`にエクスポートしてください（必要な場合）:
-   - コマンドプロンプトで、以下のコマンドを順番に実行してください:
-   ```shell
-   set CUDA_MODULE_LOADING=LAZY
-   cd /D C:\TEMP\r5-computer-vision\MODEL
-   yolo export model=best_8s.pt format=engine opset=12 workspace=7
-   ```
-
+| コンポーネント | バージョン |
+| :-----------: | :-------: |
+| CUDA          | 12.1      |
+| cuDNN         | 8.9.0     |
+| TensorRT      | 10.12.0   |
+| PyTorch       | 2.5.1     |
 
 ## 主要機能
 **動作フロー**：このプログラムは`main.py`スクリプトを実行することで、以下のシーケンスをループします：

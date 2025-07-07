@@ -51,7 +51,7 @@ class r5CVCore:
         self.fired_time = time.time()
 
         # scale: the ratio of the screen resolution to the default resolution (96 dpi)
-        self.scale = win32print.GetDeviceCaps(win32gui.GetDC(0), win32con.LOGPIXELSX) / 96
+        self.scale = win32print.GetDeviceCaps(win32gui.GetDC(0), win32con.LOGPIXELSX) / (96 * 1.5)
         self.mouse_position = np.array(mouse.Controller().position)
         self.mouse_vector = np.array([0., 0.])
 
@@ -119,7 +119,7 @@ class r5CVCore:
 
             boxes_center = ((boxes[:, :2] + boxes[:, 2:]) / 2)
             boxes_center[:, 1] = (
-                boxes[:, 1] * 0.55 + boxes[:, 3] * 0.45  # torso
+                boxes[:, 1] * 0.6 + boxes[:, 3] * 0.4  # torso
                 # boxes[:, 1] * 0.7 + boxes[:, 3] * 0.3  # chest
                 # boxes[:, 1] * 0.85 + boxes[:, 3] * 0.15
             )
@@ -218,7 +218,7 @@ class r5CVCore:
 
         # if the destination is close to the center, move the mouse slowly   TODO: Check this part
         if norm <= self.width * 4 / 3:
-            win32api.mouse.event(
+            win32api.mouse_event(
                 win32con.MOUSEEVENTF_MOVE,
                 int(self.mouse_vector[0] / 3),
                 int(self.mouse_vector[1] / 3)
@@ -281,42 +281,77 @@ class TensorRTEngine(object):
         logger = trt.Logger(trt.Logger.WARNING)
         logger.min_severity = trt.Logger.Severity.ERROR
         runtime = trt.Runtime(logger)
-        trt.init_libnvinfer_plugins(logger, '')  # initialize TensorRT plugins
+
+        trt.init_libnvinfer_plugins(logger, '')
         with open(engine_path, 'rb') as f:
-            if engine_path[-7:] == '.engine':
-                meta_len = int.from_bytes(f.read(4), byteorder='little')  # read metadata length
-                metadata = json.loads(f.read(meta_len).decode('utf-8'))  # read metadata  # noqa: F841
-            engine = runtime.deserialize_cuda_engine(f.read())  # read engine
-            # serialized_engine = f.read()
-        # engine = runtime.deserialize_cuda_engine(serialized_engine)
-        self.imgsz = engine.get_binding_shape(0)[2:]  # get imgsz
-        self.n_classes = engine.get_binding_shape(1)[1] - 4  # get n_classes from "(x1 y1 x2 y2) c1 c2 c3 cn"
+            engine = runtime.deserialize_cuda_engine(f.read())
+
+        num_io_tensors = engine.num_io_tensors
         self.context = engine.create_execution_context()
         self.inputs, self.outputs, self.bindings = [], [], []
         self.stream = cuda.Stream()
-        for binding in engine:
-            size = trt.volume(engine.get_binding_shape(binding))
-            dtype = trt.nptype(engine.get_binding_dtype(binding))
+
+        # Get input tensor info
+        input_name = None
+        output_name = None
+
+        for i in range(num_io_tensors):
+            tensor_name = engine.get_tensor_name(i)
+            if engine.get_tensor_mode(tensor_name) == trt.TensorIOMode.INPUT:
+                input_name = tensor_name
+            else:
+                output_name = tensor_name
+
+        # Set image size from input tensor
+        self.imgsz = engine.get_tensor_shape(input_name)[2:]
+
+        # Calculate number of classes from output tensor shape
+        output_shape = engine.get_tensor_shape(output_name)
+        if len(output_shape) >= 2:
+            self.n_classes = output_shape[1] - 4
+        else:
+            self.n_classes = 80  # Default to COCO classes
+
+        # Allocate memory for inputs and outputs
+        for i in range(num_io_tensors):
+            tensor_name = engine.get_tensor_name(i)
+            shape = engine.get_tensor_shape(tensor_name)
+            dtype = trt.nptype(engine.get_tensor_dtype(tensor_name))
+
+            # Calculate size
+            size = 1
+            for dim in shape:
+                if dim > 0:
+                    size *= dim
+
             host_mem = cuda.pagelocked_empty(size, dtype)
             device_mem = cuda.mem_alloc(host_mem.nbytes)
-            self.bindings.append(int(device_mem))
-            if engine.binding_is_input(binding):
-                self.inputs.append({'host': host_mem, 'device': device_mem})
+
+            if engine.get_tensor_mode(tensor_name) == trt.TensorIOMode.INPUT:
+                self.inputs.append({'host': host_mem, 'device': device_mem, 'name': tensor_name})
             else:
-                self.outputs.append({'host': host_mem, 'device': device_mem})
+                self.outputs.append({'host': host_mem, 'device': device_mem, 'name': tensor_name})
 
     def inference(self, img, iou=0.45, conf=0.25, classes=[], end2end=False) -> tuple:
         cuda_img, ratio = TensorRTEngine.preprocess(img, self.imgsz)
         self.inputs[0]['host'] = np.ravel(cuda_img)
-        # copy inputs to GPU
+
+        # Copy inputs to GPU
         for inp in self.inputs:
             cuda.memcpy_htod_async(inp['device'], inp['host'], self.stream)
-        # run inference
-        self.context.execute_async_v2(bindings=self.bindings, stream_handle=self.stream.handle)
-        # copy outputs from GPU
+            self.context.set_tensor_address(inp['name'], int(inp['device']))
+
+        # Set output tensor addresses
+        for out in self.outputs:
+            self.context.set_tensor_address(out['name'], int(out['device']))
+
+        self.context.execute_async_v3(stream_handle=self.stream.handle)
+
+        # Copy outputs from GPU
         for out in self.outputs:
             cuda.memcpy_dtoh_async(out['host'], out['device'], self.stream)
-        # synchronize stream
+
+        # Synchronize stream
         self.stream.synchronize()
         data = [out['host'] for out in self.outputs]
 
@@ -341,6 +376,7 @@ class TensorRTEngine(object):
                 mask = np.logical_and(score_mask, class_mask)
             else:
                 mask = score_mask
+
             boxes = final_boxes[mask]
             scores = final_scores[mask]
             cls_inds = final_cls_inds[mask]
@@ -348,6 +384,7 @@ class TensorRTEngine(object):
             boxes = np.empty((0, 4))
             scores = np.empty((0, self.n_classes))
             cls_inds = np.empty((0, 1))
+
         return boxes, scores, cls_inds
 
     @staticmethod
